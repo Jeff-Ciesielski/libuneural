@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <string.h>
+
 #include <uneural.h>
 
 static int uneural_network_validate_storage(fix16_t *data)
@@ -12,11 +14,14 @@ static int uneural_network_validate_storage(fix16_t *data)
     return 0;
 }
 
-int uneural_network_init_storage(fix16_t *net_data)
+int uneural_network_init_storage(fix16_t *net_data,
+                                 ssize_t size)
 {
     if (net_data == NULL) {
         return -NULL_ARG;
     }
+
+    memset(net_data, 0x00, size);
 
     *(uint32_t*)net_data = STORAGE_INIT_MAGIC;
 
@@ -46,15 +51,13 @@ ssize_t uneural_network_get_data_requirement(struct uneural_network *n)
     struct uneural_layer *l = n->input->next;
 
     while (l != NULL) {
-        total_required += ((l->prev->num_neurons * sizeof(fix16_t)) + sizeof(fix16_t));
+        total_required += ((l->prev->num_neurons * sizeof(fix16_t)) + sizeof(fix16_t) + sizeof(uint32_t));
         l = l->next;
     }
 
     return total_required;
 }
 
-/* TODO: Change storage format to include the neuron types in the
- * binary blob */
 int uneural_network_data_attach(struct uneural_network *n,
                                 fix16_t *data,
                                 ssize_t data_size)
@@ -91,11 +94,16 @@ int uneural_network_data_attach(struct uneural_network *n,
         /* Walk the neurons individually and assign them weight and
          * bias storage */
         for(int i = 0; i < l->num_neurons; i++) {
+            l->neurons[i].n_type = (uint32_t*)data;
+            data++;
             l->neurons[i].bias = data;
             data++;
             l->neurons[i].weights = data;
             data += (sizeof(fix16_t) * l->prev->num_neurons);
         }
+
+        l = l->next;
+        
     }
 
     n->storage_attached = true;

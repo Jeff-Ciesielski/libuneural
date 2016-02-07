@@ -1,7 +1,39 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <uneural.h>
+
+static fix16_t uneural_sigmoid_deriv(fix16_t v)
+{
+    fix16_t deriv = 0;
+    deriv = fix16_sub(F16(1), v);
+    deriv = fix16_mul(v, deriv);
+
+    return deriv;
+
+}
+
+static fix16_t uneural_tanh_deriv(fix16_t v)
+{
+    fix16_t deriv = 0;
+    return deriv;
+
+}
+
+static fix16_t uneural_relu_deriv(fix16_t v)
+{
+    fix16_t deriv = 0;
+    return deriv;
+
+}
+
+static fix16_t uneural_leaky_relu_deriv(fix16_t v)
+{
+    fix16_t deriv = 0;
+    return deriv;
+
+}
 
 static fix16_t uneural_random_weight(void)
 {
@@ -24,19 +56,25 @@ uint16_t uneural_network_largest_layer_size(struct uneural_network *n)
     return max_layer_size;
 }
 
-size_t uneural_network_get_training_scratch_size(struct uneural_network *n)
+ssize_t uneural_network_get_training_scratch_size(struct uneural_network *n)
 {
+
+    if (n == NULL) {
+        return -NULL_ARG;
+    }
+
     uint16_t max_layer_size = uneural_network_largest_layer_size(n);
 
     return (max_layer_size * max_layer_size) * 8 * sizeof(fix16_t);
 }
 
+/* TODO: Add size check to inputs and outputs */
 int uneural_network_backprop(struct uneural_network *n,
-                             fix16_t *input,
-                             fix16_t *expected_output,
+                             const fix16_t *input,
+                             const fix16_t *expected_output,
                              fix16_t training_rate,
                              fix16_t *scratch,
-                             fix16_t *rmse)
+                             fix16_t *output_error)
 {
 
     if (n == NULL || input == NULL ||
@@ -64,11 +102,12 @@ int uneural_network_backprop(struct uneural_network *n,
     fix16_t *l2_delta = l2_error + step_size;
     fix16_t *l2_start_weight = l2_delta + step_size;
 
-    for (struct uneural_layer *l = n->output; l->prev != n->input; l = l->prev) {
+    for (struct uneural_layer *l = n->output; l->prev != NULL; l = l->prev) {
 
         struct uneural_layer *l_p = l->prev;
 
         if (l == n->output) {
+            //printf("Output Layer\n");
             for (int i = 0; i < l->num_neurons; i++) {
 
                 /* Copy in the initial weights */
@@ -80,19 +119,39 @@ int uneural_network_backprop(struct uneural_network *n,
                 l2_error[i] = fix16_sub(expected_output[i],
                                         l->neurons[i].output);
 
+                output_error[i] = l2_error[i];
+
                 fix16_t deriv = 0;
-                deriv = fix16_sub(F16(1), l2_output[i]);
-                deriv = fix16_mul(l2_output[i], deriv);
+
+                switch (*l->neurons[i].n_type) {
+                case NEURON_TYPE_SIGMOID:
+                    deriv = uneural_sigmoid_deriv(l2_output[i]);
+                    break;
+                case NEURON_TYPE_TANH:
+                    deriv = uneural_tanh_deriv(l2_output[i]);
+                    break;
+                case NEURON_TYPE_RELU:
+                    deriv = uneural_relu_deriv(l2_output[i]);
+                    break;
+                case NEURON_TYPE_LEAKY_RELU:
+                    deriv = uneural_leaky_relu_deriv(l2_output[i]);
+                    break;
+                }
 
                 l2_delta[i] = fix16_mul(l2_error[i], deriv);
             }
+            
+        } else {
+            //printf("Hidden Layer\n");
         }
 
         for (int i = 0; i < l_p->num_neurons; i++) {
 
-            /* Copy in the initial weights */
-            for (int j = 0; j < l_p->prev->num_neurons; j++) {
-                l1_start_weight[l_p->num_neurons * i + j] = l_p->neurons[i].weights[j];
+            if (l_p->prev != NULL) {
+                /* Copy in the initial weights */
+                for (int j = 0; j < l_p->prev->num_neurons; j++) {
+                    l1_start_weight[l_p->num_neurons * i + j] = l_p->neurons[i].weights[j];
+                }
             }
 
             l1_output[i] = l_p->neurons[i].output;
@@ -113,13 +172,14 @@ int uneural_network_backprop(struct uneural_network *n,
         }
 
         /* Update working layer weights */
-
+        //printf("Updating layer weights\n");
         for (int i = 0; i < l->num_neurons; i++) {
             for (int j = 0; j < l_p->num_neurons; j++) {
                 fix16_t layer_adj = fix16_mul(l2_delta[i],
                                               l1_output[j]);
                 layer_adj = fix16_mul(layer_adj,
                                       training_rate);
+                //printf("Layer[%d, %d] adj: %f\n", i, j, fix16_to_float(layer_adj));
                 l->neurons[i].weights[j] = fix16_add(l->neurons[i].weights[j],
                                                      layer_adj);
             }
@@ -167,6 +227,7 @@ int uneural_network_randomize_weights(struct uneural_network *n)
                 l->neurons[i].weights[j] = uneural_random_weight();
             }
         }
+        l = l->next;
     }
 
     return 0;

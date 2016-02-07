@@ -3,6 +3,8 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
+#include <stdio.h>
+
 #include <uneural.h>
 
 
@@ -32,7 +34,6 @@ fix16_t uneural_activate_tanh(fix16_t sum)
     temp = uneural_activate_sigmoid(temp);
     temp = fix16_mul(temp, F16(2));
     temp = fix16_sub(temp, F16(1));
-
     return temp;
 }
 
@@ -40,7 +41,7 @@ fix16_t uneural_activate_relu(fix16_t sum)
 {
     /* Applies the ReLU activation function to sum and returns the result */
     /* max(0, x) */
-    return fix16_max(0, sum);
+    return fix16_max(F16(0), sum);
 }
 
 fix16_t uneural_activate_leaky_relu(fix16_t sum)
@@ -79,7 +80,7 @@ int uneural_activate_layer(struct uneural_layer *work_layer)
                                         work_neuron->output);
 
         /* Fire the correct activation function for the neuron's type */
-        switch (work_neuron->n_type) {
+        switch (*work_neuron->n_type) {
         case NEURON_TYPE_SIGMOID:
             work_neuron->output = uneural_activate_sigmoid(work_neuron->output);
             break;
@@ -89,6 +90,9 @@ int uneural_activate_layer(struct uneural_layer *work_layer)
         case NEURON_TYPE_RELU:
             work_neuron->output = uneural_activate_relu(work_neuron->output);
             break;
+        case NEURON_TYPE_LEAKY_RELU:
+            work_neuron->output = uneural_activate_leaky_relu(work_neuron->output);
+            break;
         }
     }
 
@@ -97,7 +101,7 @@ int uneural_activate_layer(struct uneural_layer *work_layer)
 }
 
 int uneural_activate_network(struct uneural_network *n,
-                             fix16_t *inputs,
+                             const fix16_t *inputs,
                              fix16_t *outputs)
 {
     if (n == NULL || inputs == NULL) {
@@ -117,6 +121,7 @@ int uneural_activate_network(struct uneural_network *n,
     for (int i = 0; i < n->input->num_neurons; i++) {
         n->input->neurons[i].output = inputs[i];
     }
+
 
     /* Activate each layer in turn. Continue until the output layer is
      * reached, then copy the final layer's outputs to the output
@@ -178,9 +183,24 @@ int uneural_network_add_input_layer(struct uneural_network *n,
     return 0;
 }
 
+int uneural_network_set_layer_type(struct uneural_layer *l,
+                                   enum neuron_type n_type)
+{
+    if (l == NULL) {
+        return -NULL_ARG;
+    }
+
+    for (int i = 0; i < l->num_neurons; i++) {
+        *l->neurons[i].n_type = (uint32_t)n_type;
+    }
+
+
+    return 0;
+}
+
+
 int uneural_network_add_output_layer(struct uneural_network *n,
-                                     struct uneural_layer *l,
-                                     enum neuron_type n_type)
+                                     struct uneural_layer *l)
 {
     if (n == NULL || l == NULL) {
         return -NULL_ARG;
@@ -198,16 +218,11 @@ int uneural_network_add_output_layer(struct uneural_network *n,
 
     n->output->next = NULL;
 
-    for (int i = 0; i < l->num_neurons; i++) {
-        l->neurons[i].n_type = n_type;
-    }
-
     return 0;
 }
 
 int uneural_network_add_hidden_layer(struct uneural_network *n,
-                                     struct uneural_layer *l,
-                                     enum neuron_type n_type)
+                                     struct uneural_layer *l)
 {
     if (n == NULL || l == NULL) {
         return -NULL_ARG;
@@ -233,10 +248,6 @@ int uneural_network_add_hidden_layer(struct uneural_network *n,
     } else {
         last->next = l;
         l->prev = last;
-    }
-    
-    for (int i = 0; i < l->num_neurons; i++) {
-        l->neurons[i].n_type = n_type;
     }
 
     return 0;
