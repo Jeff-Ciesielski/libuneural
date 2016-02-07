@@ -17,8 +17,9 @@ static fix16_t uneural_sigmoid_deriv(fix16_t v)
 static fix16_t uneural_tanh_deriv(fix16_t v)
 {
     fix16_t deriv = 0;
+    deriv = fix16_sq(v);
+    deriv = fix16_sub(F16(1), deriv);
     return deriv;
-
 }
 
 static fix16_t uneural_relu_deriv(fix16_t v)
