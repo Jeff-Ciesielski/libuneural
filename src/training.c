@@ -7,8 +7,8 @@
 static fix16_t uneural_sigmoid_deriv(fix16_t v)
 {
     fix16_t deriv = 0;
-    deriv = fix16_sub(F16(1), v);
-    deriv = fix16_mul(v, deriv);
+    deriv = fix16_ssub(F16(1), v);
+    deriv = fix16_smul(v, deriv);
 
     return deriv;
 
@@ -18,21 +18,26 @@ static fix16_t uneural_tanh_deriv(fix16_t v)
 {
     fix16_t deriv = 0;
     deriv = fix16_sq(v);
-    deriv = fix16_sub(F16(1), deriv);
+    deriv = fix16_ssub(F16(1), deriv);
     return deriv;
 }
 
 static fix16_t uneural_relu_deriv(fix16_t v)
 {
-    fix16_t deriv = 0;
-    return deriv;
 
+    if (v <= 0)
+        return F16(0);
+    else
+        return F16(1);
 }
 
 static fix16_t uneural_leaky_relu_deriv(fix16_t v)
 {
-    fix16_t deriv = 0;
-    return deriv;
+
+    if (v <= 0)
+        return F16(.01);
+    else
+        return F16(1);
 
 }
 
@@ -117,7 +122,7 @@ int uneural_network_backprop(struct uneural_network *n,
                 }
 
                 l2_output[i] = l->neurons[i].output;
-                l2_error[i] = fix16_sub(expected_output[i],
+                l2_error[i] = fix16_ssub(expected_output[i],
                                         l->neurons[i].output);
 
                 output_error[i] = l2_error[i];
@@ -139,7 +144,7 @@ int uneural_network_backprop(struct uneural_network *n,
                     break;
                 }
 
-                l2_delta[i] = fix16_mul(l2_error[i], deriv);
+                l2_delta[i] = fix16_smul(l2_error[i], deriv);
             }
             
         } else {
@@ -158,30 +163,30 @@ int uneural_network_backprop(struct uneural_network *n,
             l1_output[i] = l_p->neurons[i].output;
 
             for (int j = 0; j < l->num_neurons; j++) {
-                fix16_t temp = fix16_mul(l2_delta[j],
+                fix16_t temp = fix16_smul(l2_delta[j],
                                          l2_start_weight[l->num_neurons * j + i]);
 
-                l1_error[i] = fix16_add(l1_error[i],
+                l1_error[i] = fix16_sadd(l1_error[i],
                                         temp);
             }
 
             fix16_t deriv = 0;
-            deriv = fix16_sub(F16(1), l1_output[i]);
-            deriv = fix16_mul(l1_output[i], deriv);
+            deriv = fix16_ssub(F16(1), l1_output[i]);
+            deriv = fix16_smul(l1_output[i], deriv);
 
-            l1_delta[i] = fix16_mul(l1_error[i], deriv);
+            l1_delta[i] = fix16_smul(l1_error[i], deriv);
         }
 
         /* Update working layer weights */
         //printf("Updating layer weights\n");
         for (int i = 0; i < l->num_neurons; i++) {
             for (int j = 0; j < l_p->num_neurons; j++) {
-                fix16_t layer_adj = fix16_mul(l2_delta[i],
+                fix16_t layer_adj = fix16_smul(l2_delta[i],
                                               l1_output[j]);
-                layer_adj = fix16_mul(layer_adj,
+                layer_adj = fix16_smul(layer_adj,
                                       training_rate);
                 //printf("Layer[%d, %d] adj: %f\n", i, j, fix16_to_float(layer_adj));
-                l->neurons[i].weights[j] = fix16_add(l->neurons[i].weights[j],
+                l->neurons[i].weights[j] = fix16_sadd(l->neurons[i].weights[j],
                                                      layer_adj);
             }
         }

@@ -13,12 +13,12 @@ fix16_t uneural_activate_sigmoid(fix16_t sum)
     /* Applies the sigmoid activation function to sum and returns the result */
     /* 1 / 1 (e ^-x) */
     fix16_t temp;
-    temp = fix16_mul(sum,
+    temp = fix16_smul(sum,
                      F16(-1));
 
     temp = fix16_exp(temp);
-    temp = fix16_add(fix16_one, temp);
-    temp = fix16_div(fix16_one, temp);
+    temp = fix16_sadd(fix16_one, temp);
+    temp = fix16_sdiv(fix16_one, temp);
 
     return temp;
 
@@ -30,10 +30,10 @@ fix16_t uneural_activate_tanh(fix16_t sum)
     /* 2*sigmoid(2*x) - 1 */
     fix16_t temp;
 
-    temp = fix16_mul(sum, F16(2));
+    temp = fix16_smul(sum, F16(2));
     temp = uneural_activate_sigmoid(temp);
-    temp = fix16_mul(temp, F16(2));
-    temp = fix16_sub(temp, F16(1));
+    temp = fix16_smul(temp, F16(2));
+    temp = fix16_ssub(temp, F16(1));
     return temp;
 }
 
@@ -49,7 +49,7 @@ fix16_t uneural_activate_leaky_relu(fix16_t sum)
     /* Applies the Leaky ReLU activation function to sum and returns the result */
     /* TODO: Make leaky arg (a) configurable */
     /* max(x * -a, x) */
-    fix16_t lh_arg = fix16_mul(F16(-.01), sum);
+    fix16_t lh_arg = fix16_smul(F16(-.01), sum);
     return fix16_max(lh_arg, sum);
 }
 
@@ -70,13 +70,13 @@ int uneural_activate_layer(struct uneural_layer *work_layer)
         for (int j = 0; j < work_layer->prev->num_neurons; j++) {
             struct uneural_neuron *in_neuron = &work_layer->prev->neurons[j];
 
-            temp = fix16_mul(work_neuron->weights[j], in_neuron->output);
+            temp = fix16_smul(work_neuron->weights[j], in_neuron->output);
 
-            work_neuron->output = fix16_add(work_neuron->output, temp);
+            work_neuron->output = fix16_sadd(work_neuron->output, temp);
         }
 
         /* Add the neuron's bias */
-        work_neuron->output = fix16_add(work_neuron->bias[0],
+        work_neuron->output = fix16_sadd(work_neuron->bias[0],
                                         work_neuron->output);
 
         /* Fire the correct activation function for the neuron's type */
