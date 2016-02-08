@@ -39,14 +39,21 @@ fix16_t fix16_exp(fix16_t inValue) {
 	uint_fast8_t i;        
 	for (i = 2; i < 30; i++)
 	{
+#ifdef FIXMATH_SATURATED_ONLY
+		term = fix16_smul(term, fix16_sdiv(inValue, fix16_from_int(i)));
+#else
 		term = fix16_mul(term, fix16_div(inValue, fix16_from_int(i)));
+#endif
 		result += term;
                 
 		if ((term < 500) && ((i > 15) || (term < 20)))
 			break;
 	}
-            
+#ifdef FIXMATH_SATURATED_ONLY
+	if (neg) result = fix16_sdiv(fix16_one, result);
+#else
 	if (neg) result = fix16_div(fix16_one, result);
+#endif
             
 	#ifndef FIXMATH_NO_CACHE
 	_fix16_exp_cache_index[tempIndex] = inValue;
@@ -55,7 +62,6 @@ fix16_t fix16_exp(fix16_t inValue) {
 
 	return result;
 }
-
 
 
 fix16_t fix16_log(fix16_t inValue)
@@ -72,13 +78,21 @@ fix16_t fix16_log(fix16_t inValue)
 	const fix16_t e_to_fourth = 3578144;
 	while (inValue > fix16_from_int(100))
 	{
+#ifdef FIXMATH_SATURATED_ONLY
+		inValue = fix16_sdiv(inValue, e_to_fourth);
+#else
 		inValue = fix16_div(inValue, e_to_fourth);
+#endif
 		scaling += 4;
 	}
 	
 	while (inValue < fix16_one)
 	{
+#ifdef FIXMATH_SATURATED_ONLY
+		inValue = fix16_smul(inValue, e_to_fourth);
+#else
 		inValue = fix16_mul(inValue, e_to_fourth);
+#endif
 		scaling -= 4;
 	}
 	
@@ -88,7 +102,11 @@ fix16_t fix16_log(fix16_t inValue)
 		// f(x) = e(x) - y
 		// f'(x) = e(x)
 		fix16_t e = fix16_exp(guess);
+#ifdef FIXMATH_SATURATED_ONLY
+		delta = fix16_sdiv(inValue - e, e);
+#else
 		delta = fix16_div(inValue - e, e);
+#endif
 		
 		// It's unlikely that logarithm is very large, so avoid overshooting.
 		if (delta > fix16_from_int(3))
@@ -134,7 +152,11 @@ static fix16_t fix16__log2_inner(fix16_t x)
 	uint_fast8_t i;
 	for(i = 16; i > 0; i--)
 	{
+#ifdef FIXMATH_SATURATED_ONLY
+		x = fix16_smul(x, x);
+#else
 		x = fix16_mul(x, x);
+#endif
 		result <<= 1;
 		if(x >= fix16_from_int(2))
 		{
@@ -143,7 +165,11 @@ static fix16_t fix16__log2_inner(fix16_t x)
 		}
 	}
 	#ifndef FIXMATH_NO_ROUNDING
+#ifdef FIXMATH_SATURATED_ONLY
+		x = fix16_smul(x, x);
+#else
 		x = fix16_mul(x, x);
+#endif
 		if(x >= fix16_from_int(2)) result++;
 	#endif
 	
@@ -175,8 +201,11 @@ fix16_t fix16_log2(fix16_t x)
 		// Note that the inverse of this would overflow.
 		// This is the exact answer for log2(1.0 / 65536)
 		if (x == 1) return fix16_from_int(-16);
-
+#ifdef FIXMATH_SATURATED_ONLY
+		fix16_t inverse = fix16_sdiv(fix16_one, x);
+#else
 		fix16_t inverse = fix16_div(fix16_one, x);
+#endif
 		return -fix16__log2_inner(inverse);
 	}
 

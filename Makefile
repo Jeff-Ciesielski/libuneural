@@ -17,7 +17,7 @@ SIZE= $(CROSS)size
 INC_FLAGS = $(foreach dir, $(INC), -I$(dir))
 
 CPP_FLAGS = -O2 $(INC_FLAGS) -Wall -c 
-CC_FLAGS  = -O2 $(INC_FLAGS) -Wall -c -std=c99
+CC_FLAGS  = -O2 $(INC_FLAGS) -Wall -c -std=c99 -DFIXMATH_SATURATED_ONLY
 AS_FLAGS  = $(CC_FLAGS) -D_ASSEMBLER_
 LD_FLAGS = -Wall
 

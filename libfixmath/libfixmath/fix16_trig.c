@@ -30,7 +30,11 @@ fix16_t fix16_sin_parabola(fix16_t inAngle)
 	  that means :  4/PI * x  - 4/PI² * x²
 	  Use abs(x) to handle (-PI) -> 0 zone.
 	 */
+#ifdef FIXMATH_SATURATED_ONLY
+	retval = fix16_smul(FOUR_DIV_PI, inAngle) + fix16_smul( fix16_smul(_FOUR_DIV_PI2, inAngle), abs_inAngle );
+#else
 	retval = fix16_mul(FOUR_DIV_PI, inAngle) + fix16_mul( fix16_mul(_FOUR_DIV_PI2, inAngle), abs_inAngle );
+#endif
 	/* At this point, retval equals sin(inAngle) on important points ( -PI, -PI/2, 0, PI/2, PI),
 	   but is not very precise between these points
 	 */
@@ -39,7 +43,11 @@ fix16_t fix16_sin_parabola(fix16_t inAngle)
 	mask = (retval >> (sizeof(fix16_t)*CHAR_BIT-1));
 	abs_retval = (retval + mask) ^ mask;
 	/* So improve its precision by adding some x^4 component to retval */
+#ifdef FIXMATH_SATURATED_ONLY
+	retval += fix16_smul(X4_CORRECTION_COMPONENT, fix16_smul(retval, abs_retval) - retval );
+#else
 	retval += fix16_mul(X4_CORRECTION_COMPONENT, fix16_mul(retval, abs_retval) - retval );
+#endif
 	#endif
 	return retval;
 }
@@ -75,8 +83,34 @@ fix16_t fix16_sin(fix16_t inAngle)
 		return _fix16_sin_cache_value[tempIndex];
 	#endif
 
+#ifdef FIXMATH_SATURATED_ONLY
+	fix16_t tempAngleSq = fix16_smul(tempAngle, tempAngle);
+#else
 	fix16_t tempAngleSq = fix16_mul(tempAngle, tempAngle);
+#endif
 
+#ifdef FIXMATH_SATURATED_ONLY
+	#ifndef FIXMATH_FAST_SIN // Most accurate version, accurate to ~2.1%
+	fix16_t tempOut = tempAngle;
+	tempAngle = fix16_smul(tempAngle, tempAngleSq);
+	tempOut -= (tempAngle / 6);
+	tempAngle = fix16_smul(tempAngle, tempAngleSq);
+	tempOut += (tempAngle / 120);
+	tempAngle = fix16_smul(tempAngle, tempAngleSq);
+	tempOut -= (tempAngle / 5040);
+	tempAngle = fix16_smul(tempAngle, tempAngleSq);
+	tempOut += (tempAngle / 362880);
+	tempAngle = fix16_smul(tempAngle, tempAngleSq);
+	tempOut -= (tempAngle / 39916800);
+	#else // Fast implementation, runs at 159% the speed of above 'accurate' version with an slightly lower accuracy of ~2.3%
+	fix16_t tempOut;
+	tempOut = fix16_smul(-13, tempAngleSq) + 546;
+	tempOut = fix16_smul(tempOut, tempAngleSq) - 10923;
+	tempOut = fix16_smul(tempOut, tempAngleSq) + 65536;
+	tempOut = fix16_smul(tempOut, tempAngle);
+	#endif
+
+#else
 	#ifndef FIXMATH_FAST_SIN // Most accurate version, accurate to ~2.1%
 	fix16_t tempOut = tempAngle;
 	tempAngle = fix16_mul(tempAngle, tempAngleSq);
@@ -96,7 +130,8 @@ fix16_t fix16_sin(fix16_t inAngle)
 	tempOut = fix16_mul(tempOut, tempAngleSq) + 65536;
 	tempOut = fix16_mul(tempOut, tempAngle);
 	#endif
-
+#endif
+        
 	#ifndef FIXMATH_NO_CACHE
 	_fix16_sin_cache_index[tempIndex] = inAngle;
 	_fix16_sin_cache_value[tempIndex] = tempOut;
@@ -123,8 +158,13 @@ fix16_t fix16_asin(fix16_t x)
 		return 0;
 
 	fix16_t out;
+#ifdef FIXMATH_SATURATED_ONLY
+	out = (fix16_one - fix16_smul(x, x));
+	out = fix16_sdiv(x, fix16_sqrt(out));
+#else
 	out = (fix16_one - fix16_mul(x, x));
 	out = fix16_div(x, fix16_sqrt(out));
+#endif
 	out = fix16_atan(out);
 	return out;
 }
@@ -150,6 +190,20 @@ fix16_t fix16_atan2(fix16_t inY , fix16_t inX)
 	mask = (inY >> (sizeof(fix16_t)*CHAR_BIT-1));
 	abs_inY = (inY + mask) ^ mask;
 
+#ifdef FIXMATH_SATURATED_ONLY
+	if (inX >= 0)
+	{
+		r = fix16_sdiv( (inX - abs_inY), (inX + abs_inY));
+		r_3 = fix16_smul(fix16_mul(r, r),r);
+		angle = fix16_smul(0x00003240 , r_3) - fix16_smul(0x0000FB50,r) + PI_DIV_4;
+	} else {
+		r = fix16_sdiv( (inX + abs_inY), (abs_inY - inX));
+		r_3 = fix16_smul(fix16_smul(r, r),r);
+		angle = fix16_smul(0x00003240 , r_3)
+			- fix16_mul(0x0000FB50,r)
+			+ THREE_PI_DIV_4;
+	}
+#else
 	if (inX >= 0)
 	{
 		r = fix16_div( (inX - abs_inY), (inX + abs_inY));
@@ -162,6 +216,7 @@ fix16_t fix16_atan2(fix16_t inY , fix16_t inX)
 			- fix16_mul(0x0000FB50,r)
 			+ THREE_PI_DIV_4;
 	}
+#endif
 	if (inY < 0)
 	{
 		angle = -angle;
