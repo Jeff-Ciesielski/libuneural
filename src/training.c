@@ -189,6 +189,11 @@ int uneural_network_backprop(struct uneural_network *n,
                 l->neurons[i].weights[j] = fix16_sadd(l->neurons[i].weights[j],
                                                      layer_adj);
             }
+
+            /* Adjust the neuron's bias */
+            fix16_t bias_adj = l2_delta[i];
+            bias_adj = fix16_smul(bias_adj, training_rate);
+            l->neurons[i].bias[0] = fix16_sadd(l->neurons[i].bias[0], bias_adj);
         }
 
         memcpy(l2_output, l1_output, step_size);
