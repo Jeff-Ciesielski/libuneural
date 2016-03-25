@@ -99,7 +99,7 @@ int uneural_network_backprop(struct uneural_network *n,
     uint32_t max_layer_size = uneural_network_largest_layer_size(n);
     uint32_t step_size = (max_layer_size * max_layer_size) * sizeof(fix16_t);
 
-    fix16_t *l1_output = scratch + step_size;
+    fix16_t *l1_output = scratch;
     fix16_t *l1_error = l1_output + step_size;
     fix16_t *l1_delta = l1_error + step_size;
     fix16_t *l1_start_weight = l1_delta + step_size;
