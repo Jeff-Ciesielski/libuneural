@@ -3,6 +3,7 @@
 
 #include <fix16.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 #define STORAGE_INIT_MAGIC 0xC0A1E5CE
 
@@ -28,10 +29,10 @@ enum neuron_type {
 
 struct uneural_neuron {
     uint32_t *n_type;
-    fix16_t *weights;
     fix16_t *bias;
+    fix16_t *weights;
     fix16_t output;
-};
+} __attribute__((__packed__));
 
 struct uneural_layer {
     uint16_t num_neurons;
