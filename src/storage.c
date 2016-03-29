@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <uneural.h>
 
@@ -51,7 +52,11 @@ ssize_t uneural_network_get_data_requirement(struct uneural_network *n)
     struct uneural_layer *l = n->input->next;
 
     while (l != NULL) {
-        total_required += ((l->prev->num_neurons * sizeof(fix16_t)) + sizeof(fix16_t) + sizeof(uint32_t));
+	    int temp = (((l->prev->num_neurons * sizeof(fix16_t)) +
+			 sizeof(fix16_t) + sizeof(uint32_t)) *
+			l->num_neurons);
+	    printf("adding %d bytes\n", temp);
+	    total_required += temp;
         l = l->next;
     }
 
@@ -62,15 +67,14 @@ int uneural_network_data_attach(struct uneural_network *n,
                                 fix16_t *data,
                                 ssize_t data_size)
 {
-    /* Calculate the size of the required network data buffer */
-    if (data_size < uneural_network_get_data_requirement(n)) {
-        return -DATA_STORAGE_INSUFFICIENT;
-    }
+
+    fix16_t *start_addr = data;
+
 
     /* We do a lot of pointer walking in this library. Make sure the
      * state storage is aligned to avoid faults on systems where
      * unaligned access isn't supported */
-    if ((uint32_t)data % 4) {
+    if ((intptr_t)data % 4) {
         return -DATA_STORAGE_UNALIGNED;
     }
 
@@ -99,7 +103,7 @@ int uneural_network_data_attach(struct uneural_network *n,
             l->neurons[i].bias = data;
             data++;
             l->neurons[i].weights = data;
-            data += (sizeof(fix16_t) * l->prev->num_neurons);
+            data += (l->prev->num_neurons);
         }
 
         l = l->next;
@@ -108,5 +112,9 @@ int uneural_network_data_attach(struct uneural_network *n,
 
     n->storage_attached = true;
 
+    /* Calculate the size of the required network data buffer */
+    if (data_size < (intptr_t)(data - start_addr)) {
+        return -DATA_STORAGE_INSUFFICIENT;
+    }
     return 0;
 }
