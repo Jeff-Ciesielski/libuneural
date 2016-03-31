@@ -154,7 +154,10 @@ int uneural_network_backprop(struct uneural_network *n,
 	fix16_t *l2_error = l2_output + step_size;
 	fix16_t *l2_delta = l2_error + step_size;
 	fix16_t *l2_start_weight = l2_delta + step_size;
-	//print_network_neurons(n);
+
+#ifdef DEBUG
+	print_network_neurons(n);
+#endif
 
 	for (struct uneural_layer *l = n->output; l != n->input; l = l->prev) {
 		struct uneural_layer *l_p = l->prev;

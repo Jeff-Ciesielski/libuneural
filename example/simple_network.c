@@ -165,7 +165,8 @@ int main(int argc, char **argv)
 				uneural_activate_network(&network,
 							 inputs[j],
 							 &actual_output);
-				printf("Actual output %d - %f \n", j, fix16_to_float(actual_output));
+				printf("Actual output %d - %f \n", j,
+				       fix16_to_float(actual_output));
 			}
 		}
 

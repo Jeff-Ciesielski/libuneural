@@ -53,7 +53,6 @@ struct uneural_network {
 	static struct uneural_layer name = {.neurons=name ## _neurons,	\
 					    .num_neurons=max_size};
 
-
 /* Public NN API */
 int uneural_activate_network(struct uneural_network *n,
                              const fix16_t *inputs,
@@ -72,10 +71,6 @@ int uneural_network_data_attach(struct uneural_network *n,
                                 ssize_t data_size);
 ssize_t uneural_network_get_data_requirement(struct uneural_network *n);
 int uneural_network_init_storage(fix16_t *net_data, ssize_t storage_size);
-
-
-
-
 
 /* Training API */
 int uneural_network_randomize_weights(struct uneural_network *n);
