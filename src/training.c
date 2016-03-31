@@ -275,13 +275,9 @@ int uneural_network_backprop(struct uneural_network *n,
 			l->neurons[i].bias[0] = fix16_sadd(l->neurons[i].bias[0], bias_adj);
 			DEBUG_PRINT("Bias adjust: %f\n",
 				    fix16_to_float(bias_adj));
-
 		}
 
-		memcpy(l1_output,       l2_output, step_size);
-		memcpy(l1_error,        l2_error, step_size);
-		memcpy(l1_delta,        l2_delta, step_size);
-		memcpy(l1_start_weight, l2_start_weight, step_size);
+		memcpy(l1_output,       l2_output, step_size * 4);
 	}
 	return 0;
 }
