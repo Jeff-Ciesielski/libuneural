@@ -49,7 +49,7 @@ fix16_t uneural_activate_leaky_relu(fix16_t sum)
     /* Applies the Leaky ReLU activation function to sum and returns the result */
     /* TODO: Make leaky arg (a) configurable */
     /* max(x * -a, x) */
-    fix16_t lh_arg = fix16_smul(F16(-.01), sum);
+    fix16_t lh_arg = fix16_smul(F16(.01), sum);
     return fix16_max(lh_arg, sum);
 }
 
@@ -65,19 +65,21 @@ int uneural_activate_layer(struct uneural_layer *work_layer)
         fix16_t temp = 0;
         struct uneural_neuron *work_neuron = &work_layer->neurons[i];
 
+	/* Clear the work neuron's output */
+	work_neuron->output = 0;
+
         /* Assign the sum of products of the inputs * weights to the
          * neuron's output */
         for (int j = 0; j < work_layer->prev->num_neurons; j++) {
-            struct uneural_neuron *in_neuron = &work_layer->prev->neurons[j];
-
-            temp = fix16_smul(work_neuron->weights[j], in_neuron->output);
+            temp = fix16_smul(work_neuron->weights[j],
+			      work_layer->prev->neurons[j].output);
 
             work_neuron->output = fix16_sadd(work_neuron->output, temp);
         }
 
         /* Add the neuron's bias */
         work_neuron->output = fix16_sadd(work_neuron->bias[0],
-                                        work_neuron->output);
+					 work_neuron->output);
 
         /* Fire the correct activation function for the neuron's type */
         switch (*work_neuron->n_type) {
@@ -93,6 +95,8 @@ int uneural_activate_layer(struct uneural_layer *work_layer)
         case NEURON_TYPE_LEAKY_RELU:
             work_neuron->output = uneural_activate_leaky_relu(work_neuron->output);
             break;
+        default:
+            return -1;
         }
     }
 
@@ -117,7 +121,8 @@ int uneural_activate_network(struct uneural_network *n,
     }
 
     /* Move the inputs to the ouput of the input layer (input layer
-     * applies to bias or weight, so it's just a passthrough) */
+     * applies no bias or weight on its own, so it's just a
+     * passthrough) */
     for (int i = 0; i < n->input->num_neurons; i++) {
         n->input->neurons[i].output = inputs[i];
     }
@@ -138,10 +143,8 @@ int uneural_activate_network(struct uneural_network *n,
     }
 
     if (outputs != NULL) {
-        work_layer = n->output;
-
-        for (int i = 0; i < work_layer->num_neurons; i++) {
-            outputs[i] = work_layer->neurons[i].output;
+        for (int i = 0; i < n->output->num_neurons; i++) {
+            outputs[i] = n->output->neurons[i].output;
         }
     }
 
