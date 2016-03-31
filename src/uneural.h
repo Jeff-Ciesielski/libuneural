@@ -8,50 +8,50 @@
 #define STORAGE_INIT_MAGIC 0xC0A1E5CE
 
 enum {
-    NULL_ARG = 1,
-    MISSING_INPUT_LAYER,
-    MISSING_OUTPUT_LAYER,
-    INPUT_LAYER_EXISTS,
-    OUTPUT_LAYER_EXISTS,
-    DATA_STORAGE_INSUFFICIENT,
-    DATA_STORAGE_UNINITIALIZED,
-    DATA_STORAGE_UNALIGNED,
-    MISSING_NEURON,
-    MISSING_DATA_STORAGE,
+	NULL_ARG = 1,
+	MISSING_INPUT_LAYER,
+	MISSING_OUTPUT_LAYER,
+	INPUT_LAYER_EXISTS,
+	OUTPUT_LAYER_EXISTS,
+	DATA_STORAGE_INSUFFICIENT,
+	DATA_STORAGE_UNINITIALIZED,
+	DATA_STORAGE_UNALIGNED,
+	MISSING_NEURON,
+	MISSING_DATA_STORAGE,
 };
 
 enum neuron_type {
-    NEURON_TYPE_SIGMOID = 0,
-    NEURON_TYPE_TANH,
-    NEURON_TYPE_RELU,
-    NEURON_TYPE_LEAKY_RELU,
+	NEURON_TYPE_SIGMOID = 0,
+	NEURON_TYPE_TANH,
+	NEURON_TYPE_RELU,
+	NEURON_TYPE_LEAKY_RELU,
 };
 
 struct uneural_neuron {
-    uint32_t *n_type;
-    fix16_t *bias;
-    fix16_t *weights;
-    fix16_t output;
+	uint32_t *n_type;
+	fix16_t *bias;
+	fix16_t *weights;
+	fix16_t output;
 } __attribute__((__packed__));
 
 struct uneural_layer {
-    uint16_t num_neurons;
-    struct uneural_layer *prev;
-    struct uneural_layer *next;
-    struct uneural_neuron *neurons;
+	uint16_t num_neurons;
+	struct uneural_layer *prev;
+	struct uneural_layer *next;
+	struct uneural_neuron *neurons;
 };
 
 struct uneural_network {
-    uint16_t num_layers;
-    bool storage_attached;
-    struct uneural_layer *input;
-    struct uneural_layer *output;
+	uint16_t num_layers;
+	bool storage_attached;
+	struct uneural_layer *input;
+	struct uneural_layer *output;
 };
 
 #define DECLARE_UNEURAL_LAYER(name, max_size)                           \
-    static struct uneural_neuron name ## _neurons[max_size];            \
-    static struct uneural_layer name = {.neurons=name ## _neurons,      \
-                                        .num_neurons=max_size};
+	static struct uneural_neuron name ## _neurons[max_size];	\
+	static struct uneural_layer name = {.neurons=name ## _neurons,	\
+					    .num_neurons=max_size};
 
 
 /* Public NN API */
