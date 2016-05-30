@@ -16,8 +16,8 @@ SIZE= $(CROSS)size
 
 INC_FLAGS = $(foreach dir, $(INC), -I$(dir))
 
-CPP_FLAGS = -O2 $(INC_FLAGS) -Wall -c 
-CC_FLAGS  = -O2 $(INC_FLAGS) -Wall -c -std=c99 -DFIXMATH_SATURATED_ONLY
+CPP_FLAGS = -O0 $(INC_FLAGS) -Wall -c 
+CC_FLAGS  = -O0 $(INC_FLAGS) -Wall -c -std=c99 -DFIXMATH_SATURATED_ONLY
 AS_FLAGS  = $(CC_FLAGS) -D_ASSEMBLER_
 LD_FLAGS = -Wall
 
@@ -31,8 +31,8 @@ endif
 
 ifeq ($(MAKECMDGOALS),example)
 CC_FLAGS += -ggdb
-EXAMPLE_CC_FLAGS = $(INC_FLAGS) -Wall -O2 -ggdb
-EXAMPLE_LD_FLAGS += -lcmocka -l$(PROJECT) -L.
+EXAMPLE_CC_FLAGS = $(INC_FLAGS) -Wall -O2 -ggdb -std=c99
+EXAMPLE_LD_FLAGS += -L. -lcmocka -l$(PROJECT)
 EXAMPLE_SRC = $(wildcard example/*.c)
 EXAMPLE_EXEC = $(patsubst %.c, , $(EXAMPLE_SRC))
 endif
@@ -65,7 +65,7 @@ test: clean lib$(PROJECT).a
 	$(Q)rm a.out
 
 example: clean lib$(PROJECT).a
-	@( $(foreach E, $(EXAMPLE_SRC), $(CC) $(EXAMPLE_CC_FLAGS) $(EXAMPLE_LD_FLAGS) $(E);) ) 
+	@( $(foreach E, $(EXAMPLE_SRC), $(CC) $(EXAMPLE_CC_FLAGS) $(E) $(EXAMPLE_LD_FLAGS);) ) 
 
 lib$(PROJECT).a: $(OBJ)
 	$(AR) rcs lib$(PROJECT).a $(OBJ)

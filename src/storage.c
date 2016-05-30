@@ -83,7 +83,7 @@ int uneural_network_data_attach(struct uneural_network *n,
 	}
 
 	/* The start of the actual network data starts after the keyword */
-	data += sizeof(fix16_t);
+	data++;
 
 	/* We skip the input layer as no bias or weight are required, it
 	 * exists simply as a programming convenience */
